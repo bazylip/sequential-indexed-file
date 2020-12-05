@@ -23,15 +23,7 @@ class GradesRecord:
         else:
             self.id = str(random.randint(ID_BOUND[0], ID_BOUND[1]))
             self.grades = [random.choice(AVAILABLE_GRADES) for _ in range(3)]
-
-    def grades_average(self) -> float:
-        """
-        Calculate average of grades in the record
-
-        :return: Average of grades
-        """
-        return np.mean([float(grade) for grade in self.grades])
-
+            
     def __str__(self):
         return self.key + " " + str(self.pointer[0]) + ":" + str(self.pointer[1]) + " " + str(self.deleted) + " " + str(self.id) + " " + " ".join(self.grades)
 
