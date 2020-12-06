@@ -1,16 +1,4 @@
 {
-  "BLOCK_SIZE": 200,
-  "N": 10,
-  "AVERAGE_RECORD_SIZE": 25,
-  "STATS_LOWER_RANGE": 10,
-  "STATS_UPPER_RANGE": 10000,
-  "STATS_N_SORTS": 20,
-  "SOURCE_FILE_PATH": "data/initial_data.txt",
-  "NAMES_PATH": "data/names.txt",
-  "SURNAMES_PATH": "data/surnames.txt",
-  "PLOT_SAVE_PATH": "data/plot.png",
-  "DEBUG_TAPES": false,
-  "DEBUG_SORTER": false,
-  "SHOW_EACH_PHASE": true,
-  "SHOW_BEFORE_AFTER": true
+  "BLOCKING_FACTOR": 4,
+  "RECORD_SIZE": 33
 }
