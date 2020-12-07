@@ -25,7 +25,7 @@ class GradesRecord:
             self.grades = [random.choice(AVAILABLE_GRADES) for _ in range(3)]
 
     def __str__(self):
-        return self.key + " " + str(self.pointer[0]) + ":" + str(self.pointer[1]) + " D:" + str(1 if self.deleted else 0) + " " + str(self.id) + " " + " ".join(self.grades) + "\n"
+        return self.key + " " + str(self.pointer[0]) + ":" + str(self.pointer[1]) + " " + str(self.id) + " " + " ".join(self.grades) + " D:" + str(1 if self.deleted else 0) + "\n"
 
     def to_bytes(self):
         return str(self).encode()
