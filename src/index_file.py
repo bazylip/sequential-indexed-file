@@ -16,7 +16,7 @@ class IndexFile:
     def clear_index_file(self):
         open(self.path, "w").close()
 
-    def add_index(self, key: str):
+    def add_index(self, key: str, page_number: int):
         index = Index(key, page_number)
         with open(self.path, "a") as index_file:
             index_file.write(str(index))
