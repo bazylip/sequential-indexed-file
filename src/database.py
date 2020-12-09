@@ -7,17 +7,25 @@ CONFIG_PATH = "configs/config.json"
 with open(CONFIG_PATH, "r") as json_config:
     CONFIG = json.load(json_config)
 
-PAGE_SIZE = CONFIG["BLOCKING_FACTOR"] * CONFIG["RECORD_SIZE"]
+RECORD_SIZE = CONFIG["RECORD_SIZE"]
+BLOCKING_FACTOR = CONFIG["BLOCKING_FACTOR"]
+INITIAL_NO_OF_PAGES = CONFIG["INITIAL_NO_OF_PAGES"]
+PAGE_SIZE = RECORD_SIZE * BLOCKING_FACTOR
 
 
 class Database:
     def __init__(self, path: str):
         self.path = path
-        self.last_key = 0
-        self.last_page_index = 0
+        self.clear_database()
+        self.initialize_empty_pages()
 
     def clear_database(self):
         open(self.path, "w").close()
+
+    def initialize_empty_pages(self):
+        for i in range(INITIAL_NO_OF_PAGES):
+            empty_page = b"\0"*(PAGE_SIZE-1) + b"\n"
+            self.write_page(i, empty_page)
 
     def get_record(self, key: str, page_index: int) -> typing.Optional[GradesRecord]:
         page = self.read_page(page_index).decode().split("\n")
@@ -36,17 +44,30 @@ class Database:
 
         return GradesRecord(key, id, grades, pointer, deleted)
 
-    def add_record(self, record: GradesRecord) -> int:
-        pointer = (0, 0)
-        record.add_overflow(pointer)
+    def add_record(self, record: GradesRecord, page_index: int) -> bool:
+        record.add_overflow((0,0))  # TODO: fix this
 
-        page = self.read_page(self.last_page_index)
-        while(len(page + record.to_bytes()) > PAGE_SIZE):
-            self.last_page_index += 1
-            page = self.read_page(self.last_page_index)
+        page = self.read_page(page_index)
+        """
+        if record.key > self.highest_key:
+            if self.page_size(page + record.to_bytes()) > PAGE_SIZE:
+                page_index += 1
+            record_str = str(record).rstrip("\n")
+            print(f"Adding record: {record_str} at the end of page {page_index}")
+            self.write_page(page_index, page + record.to_bytes())
+            return False
+        """
+        if self.page_size(page + record.to_bytes()) > PAGE_SIZE:
+            record_str = str(record).rstrip("\n")
+            print(f"overflow: {record_str}")
+            return True
 
-        self.write_page(self.last_page_index, page + record.to_bytes())
-        return self.last_page_index
+        offset = self.get_offset(page, record)
+        page = self.update_page(page, offset, record)
+        record_str = str(record).rstrip("\n")
+        print(f"Adding record: {record_str} to page {page_index} at offset {offset}")
+        self.write_page(page_index, page)
+        return False
 
     def read_page(self, page_index: int) -> bytes:
         with open(self.path, "rb") as database:
@@ -58,9 +79,36 @@ class Database:
             database.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             database.write(page)
 
+    def update_page(self, page: bytes, offset: int, record: GradesRecord):
+        #print(f"page before: {page}")
+        page = page[:offset * RECORD_SIZE] + record.to_bytes() + page[offset * RECORD_SIZE:]
+        #print(f"page after: {page}")
+        return page
+
+    def page_size(self, page: bytes):
+        return len(page.replace(b"\0", b""))
+
+    def get_offset(self, page: bytes, record: GradesRecord) -> typing.Optional[int]:
+        key = record.key.encode()
+        page = page.replace(b"\0", b"")
+        if len(set(page)) <= 1:  # page is empty
+            return 0
+        #print(f"page: {page}")
+        page_keys = [k.split(b" ")[0] for k in page.split(b"\n")][:-1]
+        page_keys = [k for k in page_keys if k]  # remove empty strings
+        #print(f"searching for key: {key}")
+        #print(f"in page keys: {page_keys}")
+
+        for i, page_key in enumerate(page_keys):
+            if key < page_key:
+                #print(f"next key: {page_key}, index: {i}")
+                return i
+        print(f"at the end, page keys: {page_keys}, len: {len(page_keys)}")
+        return len(page_keys)
+
     def number_of_pages(self):
         i = 0
-        while page := self.read_page(i):
+        while self.read_page(i):
             i += 1
         return i
 
