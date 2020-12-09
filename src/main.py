@@ -15,3 +15,6 @@ for _ in range(30):
     key = str(random.randrange(MAX_KEY)).rjust(len(str(MAX_KEY)), "0")
     record = GradesRecord(key)
     seq_ind_file.add_record(record)
+
+seq_ind_file.database.read_all_pages()
+seq_ind_file.index_file.dump_to_file()

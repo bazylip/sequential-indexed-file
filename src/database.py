@@ -11,6 +11,7 @@ RECORD_SIZE = CONFIG["RECORD_SIZE"]
 BLOCKING_FACTOR = CONFIG["BLOCKING_FACTOR"]
 INITIAL_NO_OF_PAGES = CONFIG["INITIAL_NO_OF_PAGES"]
 PAGE_SIZE = RECORD_SIZE * BLOCKING_FACTOR
+PADDING_SYMBOL = b"\0" if CONFIG["PADDING_SYMBOL"] == "null" else CONFIG["PADDING_SYMBOL"].encode()
 
 
 class Database:
@@ -24,7 +25,7 @@ class Database:
 
     def initialize_empty_pages(self):
         for i in range(INITIAL_NO_OF_PAGES):
-            empty_page = b"\0"*(PAGE_SIZE-1) + b"\n"
+            empty_page = PADDING_SYMBOL*(PAGE_SIZE)
             self.write_page(i, empty_page)
 
     def get_record(self, key: str, page_index: int) -> typing.Optional[GradesRecord]:
@@ -74,6 +75,13 @@ class Database:
             database.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             return database.read(PAGE_SIZE)
 
+    def read_all_pages(self):
+        i = 0
+        while page := self.read_page(i):
+            print(f"PAGE {i}:")
+            print(page.decode())
+            i += 1
+
     def write_page(self, page_index: int, page: bytes):
         with open(self.path, "rb+") as database:
             database.seek(page_index * PAGE_SIZE, os.SEEK_SET)
@@ -86,11 +94,11 @@ class Database:
         return page
 
     def page_size(self, page: bytes):
-        return len(page.replace(b"\0", b""))
+        return len(page.replace(PADDING_SYMBOL, b""))
 
     def get_offset(self, page: bytes, record: GradesRecord) -> typing.Optional[int]:
         key = record.key.encode()
-        page = page.replace(b"\0", b"")
+        page = page.replace(PADDING_SYMBOL, b"")
         if len(set(page)) <= 1:  # page is empty
             return 0
         #print(f"page: {page}")

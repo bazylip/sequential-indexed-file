@@ -10,8 +10,6 @@ class SeqIndFile:
     def add_record(self, record: GradesRecord):
         page_number = self.index_file.get_page_to_insert(record)
         overflow = self.database.add_record(record, page_number)
-        if not overflow:
-            self.index_file.add_index(record.key, page_number)
 
 if __name__ == "__main__":
     seq_ind_file = SeqIndFile("data/database.dat", "data/index_file.dat")
