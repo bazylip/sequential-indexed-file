@@ -10,8 +10,8 @@ with open(CONFIG_PATH, "r") as json_config:
 
 MAX_KEY = CONFIG["MAX_KEY"]
 
-seq_ind_file = SeqIndFile("data/database1.dat", "data/index_file.dat")
-for _ in range(30):
+seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
+for _ in range(40):
     key = str(random.randrange(MAX_KEY)).rjust(len(str(MAX_KEY)), "0")
     record = GradesRecord(key)
     seq_ind_file.add_record(record)

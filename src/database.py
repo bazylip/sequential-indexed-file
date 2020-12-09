@@ -14,9 +14,34 @@ PAGE_SIZE = RECORD_SIZE * BLOCKING_FACTOR
 PADDING_SYMBOL = b"\0" if CONFIG["PADDING_SYMBOL"] == "null" else CONFIG["PADDING_SYMBOL"].encode()
 
 
-class Database:
+class Overflow:
     def __init__(self, path: str):
         self.path = path
+        self.last_page_index = 0
+        self.clear_overflow()
+
+    def clear_overflow(self):
+        open(self.path, "w").close()
+
+    def read_page(self, page_index: int):
+        with open(self.path, "br") as overflow:
+            overflow.seek(page_index * PAGE_SIZE, os.SEEK_SET)
+            return overflow.read(PAGE_SIZE)
+
+    def write_page(self, page_index: int, page: bytes):
+        with open(self.path, "ba") as overflow:
+            overflow.seek(page_index * PAGE_SIZE, os.SEEK_SET)
+            overflow.write(page)
+
+    def add_record(self, record: GradesRecord):
+        with open(self.path, "ba") as overflow:
+            overflow.write(record.to_bytes())
+
+
+class Database:
+    def __init__(self, database_path: str, overflow_path: str):
+        self.path = database_path
+        self.overflow = Overflow(overflow_path)
         self.clear_database()
         self.initialize_empty_pages()
 
@@ -49,18 +74,11 @@ class Database:
         record.add_overflow((0,0))  # TODO: fix this
 
         page = self.read_page(page_index)
-        """
-        if record.key > self.highest_key:
-            if self.page_size(page + record.to_bytes()) > PAGE_SIZE:
-                page_index += 1
-            record_str = str(record).rstrip("\n")
-            print(f"Adding record: {record_str} at the end of page {page_index}")
-            self.write_page(page_index, page + record.to_bytes())
-            return False
-        """
+
         if self.page_size(page + record.to_bytes()) > PAGE_SIZE:
             record_str = str(record).rstrip("\n")
             print(f"overflow: {record_str}")
+            self.overflow.add_record(record)
             return True
 
         offset = self.get_offset(page, record)
