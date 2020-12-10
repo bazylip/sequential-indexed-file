@@ -15,7 +15,7 @@ with open("data/keys.txt", "r") as key_file:
     keys = key_file.readlines()
     keys = [key.rstrip("\n") for key in keys]
 
-for _ in range(50):
+for _ in range(100):
     key = str(random.randrange(MAX_KEY)).rjust(len(str(MAX_KEY)), "0")
     # key = input("Key: ")
     #if key == "":

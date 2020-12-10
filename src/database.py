@@ -40,7 +40,7 @@ class Overflow:
         self.write_page(self.current_page_index, page)
         pointer = (self.current_page_index, self.current_offset)
         self.current_offset += 1
-        if self.current_offset == PAGE_SIZE:
+        if self.current_offset == BLOCKING_FACTOR:
             self.current_page_index += 1
             self.current_offset = 0
         return pointer
