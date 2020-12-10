@@ -17,7 +17,8 @@ PADDING_SYMBOL = b"\0" if CONFIG["PADDING_SYMBOL"] == "null" else CONFIG["PADDIN
 class Overflow:
     def __init__(self, path: str):
         self.path = path
-        self.last_page_index = 0
+        self.current_page_index = 0
+        self.current_offset = 0
         self.clear_overflow()
 
     def clear_overflow(self):
@@ -29,13 +30,20 @@ class Overflow:
             return overflow.read(PAGE_SIZE)
 
     def write_page(self, page_index: int, page: bytes):
-        with open(self.path, "ba") as overflow:
+        with open(self.path, "br+") as overflow:
             overflow.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             overflow.write(page)
 
     def add_record(self, record: GradesRecord):
-        with open(self.path, "ba") as overflow:
-            overflow.write(record.to_bytes())
+        page = self.read_page(self.current_page_index)
+        page = page[:self.current_offset * RECORD_SIZE] + record.to_bytes() + page[self.current_offset * RECORD_SIZE:]
+        self.write_page(self.current_page_index, page)
+        pointer = (self.current_page_index, self.current_offset)
+        self.current_offset += 1
+        if self.current_offset == PAGE_SIZE:
+            self.current_page_index += 1
+            self.current_offset = 0
+        return pointer
 
 
 class Database:
@@ -44,13 +52,14 @@ class Database:
         self.overflow = Overflow(overflow_path)
         self.clear_database()
         self.initialize_empty_pages()
+        self.read_all_pages()
 
     def clear_database(self):
         open(self.path, "w").close()
 
     def initialize_empty_pages(self):
         for i in range(INITIAL_NO_OF_PAGES):
-            empty_page = PADDING_SYMBOL*(PAGE_SIZE)
+            empty_page = PADDING_SYMBOL*PAGE_SIZE
             self.write_page(i, empty_page)
 
     def get_record(self, key: str, page_index: int) -> typing.Optional[GradesRecord]:
@@ -72,19 +81,21 @@ class Database:
 
     def add_record(self, record: GradesRecord, page_index: int) -> bool:
         record.add_overflow((0,0))  # TODO: fix this
-
+        print(f"\nreading page {page_index}")
         page = self.read_page(page_index)
 
         if self.page_size(page + record.to_bytes()) > PAGE_SIZE:
             record_str = str(record).rstrip("\n")
             print(f"overflow: {record_str}")
-            self.overflow.add_record(record)
+            overflow_pointer = self.overflow.add_record(record)
+            self.resolve_previous_record(page, record)
+
             return True
 
         offset = self.get_offset(page, record)
         page = self.update_page(page, offset, record)
         record_str = str(record).rstrip("\n")
-        print(f"Adding record: {record_str} to page {page_index} at offset {offset}")
+        print(f"ADDING RECORD: {record_str} to page {page_index} at offset {offset}")
         self.write_page(page_index, page)
         return False
 
@@ -106,28 +117,27 @@ class Database:
             database.write(page)
 
     def update_page(self, page: bytes, offset: int, record: GradesRecord):
-        #print(f"page before: {page}")
         page = page[:offset * RECORD_SIZE] + record.to_bytes() + page[offset * RECORD_SIZE:]
-        #print(f"page after: {page}")
-        return page
+        return page[:PAGE_SIZE]
 
     def page_size(self, page: bytes):
         return len(page.replace(PADDING_SYMBOL, b""))
 
     def get_offset(self, page: bytes, record: GradesRecord) -> typing.Optional[int]:
         key = record.key.encode()
+        print(f"page: {page}")
         page = page.replace(PADDING_SYMBOL, b"")
         if len(set(page)) <= 1:  # page is empty
+            print(f"page empty, at the beginning, offset 0")
             return 0
-        #print(f"page: {page}")
         page_keys = [k.split(b" ")[0] for k in page.split(b"\n")][:-1]
         page_keys = [k for k in page_keys if k]  # remove empty strings
-        #print(f"searching for key: {key}")
-        #print(f"in page keys: {page_keys}")
+        print(f"searching for key: {key}")
+        print(f"in page keys: {page_keys}")
 
         for i, page_key in enumerate(page_keys):
             if key < page_key:
-                #print(f"next key: {page_key}, index: {i}")
+                print(f"next key: {page_key}, index: {i}")
                 return i
         print(f"at the end, page keys: {page_keys}, len: {len(page_keys)}")
         return len(page_keys)
@@ -137,6 +147,9 @@ class Database:
         while self.read_page(i):
             i += 1
         return i
+
+    def resolve_previous_record(self, page: bytes, record: GradesRecord):
+        print(f"Resolving, offset: {self.get_offset(page, record)}")
 
 
 if __name__ == "__main__":
