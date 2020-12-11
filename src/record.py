@@ -11,7 +11,7 @@ ID_BOUND = (100000, 999999)
 
 
 class GradesRecord:
-    def __init__(self, key: str, id_: int = None, grades: typing.List[str] = None, pointer: typing.Tuple[int, int] = (0, 0), deleted: bool = False):
+    def __init__(self, key: str, id_: int = None, grades: typing.List[str] = None, pointer: typing.Tuple[int, int] = (-1, -1), deleted: bool = False):
         self.key = key
         self.pointer = pointer
         self.deleted: bool = deleted
@@ -28,8 +28,9 @@ class GradesRecord:
         self.pointer = pointer
 
     def __str__(self):
+        pointer_str = "x:x " if self.pointer == (-1, -1) else str(self.pointer[0]) + ":" + str(self.pointer[1]) + " "
         return self.key + " " + \
-               str(self.pointer[0]) + ":" + str(self.pointer[1]) + " " + \
+               pointer_str + \
                str(self.id) + " " + \
                " ".join(self.grades) + \
                " D:" + str(1 if self.deleted else 0) + "\n"
@@ -39,6 +40,9 @@ class GradesRecord:
 
     def __len__(self):
         return len(self.to_bytes())
+
+    def __lt__(self, other):
+        return self.key < other.key
 
 if __name__ == "__main__":
     open("data/database.dat", "w").close()

@@ -15,17 +15,17 @@ with open("data/keys.txt", "r") as key_file:
     keys = key_file.readlines()
     keys = [key.rstrip("\n") for key in keys]
 
-for _ in range(100):
-    key = str(random.randrange(MAX_KEY)).rjust(len(str(MAX_KEY)), "0")
-    # key = input("Key: ")
-    #if key == "":
-    #    break
-    #key = key.rjust(len(str(MAX_KEY)), "0")
-    #keys.write(key + "\n")
-    record = GradesRecord(key)
-    seq_ind_file.add_record(record)
-
+with open("data/keys.txt", "w") as key_file:
+    for _ in range(100):
+        key = str(random.randrange(MAX_KEY)).rjust(len(str(MAX_KEY)), "0")
+        # key = input("Key: ")
+        #if key == "":
+        #    break
+        key_file.write(key + "\n")
+        record = GradesRecord(key)
+        seq_ind_file.add_record(record)
 """
+
 for key in keys:
     key_pressed = input("Continue")
     if key_pressed == "q":
@@ -33,7 +33,10 @@ for key in keys:
     record = GradesRecord(key)
     seq_ind_file.add_record(record)
     seq_ind_file.database.read_all_pages()
+    print("\nAll:")
+    seq_ind_file.database.read_all_records()
 """
 
-seq_ind_file.database.read_all_pages()
-seq_ind_file.index_file.dump_to_file()
+# seq_ind_file.database.read_all_pages()
+#seq_ind_file.index_file.dump_to_file()
+seq_ind_file.database.read_all_records()
