@@ -28,7 +28,6 @@ class IndexFile:
         self.path = path
         self.entries = []
         self.clear_index_file()
-        self.initialize_indexes()
 
     def clear_index_file(self):
         open(self.path, "w").close()
@@ -47,13 +46,12 @@ class IndexFile:
         index = Index(key, page_index)
         self.entries.append(index)
 
-    def get_page_of_record(self, key: str):
-        found_entries = [entry for entry in self.entries if key == entry.key]
-        assert len(found_entries) <= 1, "Keys are not unique"
+    def get_page_of_key(self, key: str):
+        assert self.entries, "There are no entries in index file"
 
-        if not found_entries:
-            return
-        return found_entries[0].page_index
+        keys = [entry.key for entry in self.entries]
+        previous_index = bisect.bisect_left(keys, key) - 1
+        return self.entries[previous_index].page_number
 
     def get_page_to_insert(self, record: GradesRecord):
         if not self.entries:

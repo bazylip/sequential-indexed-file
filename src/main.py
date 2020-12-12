@@ -15,8 +15,9 @@ with open("data/keys.txt", "r") as key_file:
     keys = key_file.readlines()
     keys = [key.rstrip("\n") for key in keys]
 
+key_save = ""
 with open("data/keys.txt", "w") as key_file:
-    for _ in range(100):
+    for i in range(80):
         key = str(random.randrange(MAX_KEY)).rjust(len(str(MAX_KEY)), "0")
         # key = input("Key: ")
         #if key == "":
@@ -38,5 +39,10 @@ for key in keys:
 """
 
 # seq_ind_file.database.read_all_pages()
-#seq_ind_file.index_file.dump_to_file()
-seq_ind_file.database.read_all_records()
+seq_ind_file.index_file.dump_to_file()
+seq_ind_file.print_records()
+print(f"key_save: {key_save}")
+
+seq_ind_file.print_records()
+seq_ind_file.reorganize()
+#seq_ind_file.print_records()

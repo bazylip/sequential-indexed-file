@@ -44,6 +44,7 @@ class GradesRecord:
     def __lt__(self, other):
         return self.key < other.key
 
+
 if __name__ == "__main__":
     open("data/database.dat", "w").close()
     for i in range(6):
