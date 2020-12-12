@@ -60,15 +60,3 @@ class IndexFile:
         sorted_entries = sorted(self.entries, key=lambda entry: entry.key)
         previous_index = bisect.bisect_left(sorted_entries, record)-1
         return sorted_entries[previous_index].page_number
-
-if __name__ == "__main__":
-    index_file = IndexFile("data/index_file.dat")
-    index_file.dump_to_file()
-    index_file.add_index("09752", 3)
-    index_file.add_index("01232", 1)
-    index_file.add_index("04352", 5)
-    index_file.add_index("02342", 4)
-    # print(index_file.get_page_of_record("09752"))
-    record = GradesRecord("90120")
-    #print(index_file.get_page_to_insert(record))
-

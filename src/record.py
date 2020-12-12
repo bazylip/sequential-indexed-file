@@ -43,13 +43,3 @@ class GradesRecord:
 
     def __lt__(self, other):
         return self.key < other.key
-
-
-if __name__ == "__main__":
-    open("data/database.dat", "w").close()
-    for i in range(6):
-        student = GradesRecord("1")
-        print(student.to_bytes())
-        print(len(student.to_bytes()))
-        with open("data/database.dat", "ab") as database:
-            database.write(student.to_bytes())

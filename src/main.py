@@ -45,31 +45,6 @@ def experiment():
 seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
 method_function = {1: generate_random_data, 2: load_data_from_file, 3: experiment}
 
-"""
-key_save = ""
-record_save = None
-
-with open("data/keys.txt", "w") as key_file:
-    for i in range(50):
-        key = str(random.randrange(MAX_KEY)).rjust(len(str(MAX_KEY)), "0")
-        key_file.write(key + "\n")
-        record = GradesRecord(key)
-        seq_ind_file.add_record(record)
-        if i == 10:
-            key_save = key
-        if i == 12:
-            record_save = copy.deepcopy(record)
-
-print(f"deleting record: {key_save}")
-seq_ind_file.delete_record(key_save)
-print(f"updating record: {record_save}")
-record_save.id = "183710"
-seq_ind_file.update_record(record_save)
-seq_ind_file.index_file.dump_to_file()
-seq_ind_file.print_records()
-print(f"my record: {seq_ind_file.get_record(record_save.key)}")"""
-
-
 if __name__ == "__main__":
     print("1. Generate random data")
     print("2. Load data from file")

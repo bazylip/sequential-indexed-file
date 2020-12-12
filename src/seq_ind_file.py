@@ -85,6 +85,3 @@ class SeqIndFile:
 
     def print_records(self, only_existing: bool = True):
         self.database.print_all_records(0, only_existing)
-
-if __name__ == "__main__":
-    seq_ind_file = SeqIndFile("data/database.dat", "data/index_file.dat")

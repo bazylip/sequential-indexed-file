@@ -318,16 +318,3 @@ class Database:
                 print(f"page: {page}, offset: {offset}, overflow: {is_overflow}".ljust(40) +  f"{record}", end="")
             else:
                 print(record, end="")
-
-    def reorganize(self):
-        new_path = self.path.split(".")[0] + "_reorganize." + self.path.split(".")[1]
-        new_number_of_pages = math.ceil(self.number_of_pages() / (BLOCKING_FACTOR*ALPHA))
-
-
-if __name__ == "__main__":
-    database = Database("data/database.dat")
-    page = database.read_page(1)
-    print(page)
-    database.write_page(1, page)
-    print(f"Find record 00002: {database.get_record_by_key('00002', 1)}")
-    print(f"Number of pages: {database.number_of_pages()}")
