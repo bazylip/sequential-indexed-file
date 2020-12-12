@@ -33,3 +33,4 @@ record_save.id = "183710"
 seq_ind_file.update_record(record_save)
 seq_ind_file.index_file.dump_to_file()
 seq_ind_file.print_records()
+print(f"my record: {seq_ind_file.get_record(record_save.key)}")

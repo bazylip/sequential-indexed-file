@@ -30,6 +30,11 @@ class SeqIndFile:
         if reorganize:
             self.reorganize()
 
+    def get_record(self, key: str):
+        page_number = self.index_file.get_page_of_key(key)
+        page = self.database.read_page(page_number)
+        return self.database.get_record_by_key(key, page)
+
     def delete_record(self, key: str):
         page_number = self.index_file.get_page_of_key(key)
         print(f"deleting, page number: {page_number}")
