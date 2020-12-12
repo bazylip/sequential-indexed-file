@@ -285,9 +285,10 @@ class Database:
                         yield record, overflow_page_index, overflow_offset, True
             starting_page_num += 1
 
-    def print_all_records(self, starting_page_num: int = 0):
+    def print_all_records(self, starting_page_num: int = 0, only_existing: bool = True):
         for record, page, offset, is_overflow in self.get_all_records(starting_page_num):
-            print(f"page: {page}, offset: {offset}, overflow: {is_overflow}".ljust(40) +  f"{record}", end="")
+            if only_existing and not record.deleted:
+                print(f"page: {page}, offset: {offset}, overflow: {is_overflow}".ljust(40) +  f"{record}", end="")
 
     def reorganize(self):
         new_path = self.path.split(".")[0] + "_reorganize." + self.path.split(".")[1]
