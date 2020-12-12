@@ -66,7 +66,7 @@ class SeqIndFile:
             page += new_record.to_bytes()
             num += 1
         new_database.write_page(current_page_index, page)
-        """
+
         for old_path in old_paths:
             os.remove(old_path)
         for i, new_path in enumerate(new_paths):
@@ -75,7 +75,7 @@ class SeqIndFile:
         new_database.overflow.path = old_paths[1]
         new_index_file.path = old_paths[2]
         self.database = new_database
-        self.index_file = new_index_file"""
+        self.index_file = new_index_file
         print("REORGANIZED!")
         #print(f"NEW DATABASE:")
         new_database.print_all_records()
