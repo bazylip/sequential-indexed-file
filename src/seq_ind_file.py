@@ -37,12 +37,10 @@ class SeqIndFile:
 
     def delete_record(self, key: str):
         page_number = self.index_file.get_page_of_key(key)
-        print(f"deleting, page number: {page_number}")
         self.database.delete_record(key, page_number)
 
     def update_record(self, new_record: GradesRecord):
         page_number = self.index_file.get_page_of_key(new_record.key)
-        print(f"updating, page number: {page_number}")
         self.database.update_record(new_record, page_number)
 
     def reorganize(self):
@@ -52,11 +50,11 @@ class SeqIndFile:
         new_number_of_pages = math.ceil(self.database.number_of_records / (BLOCKING_FACTOR * ALPHA))
         new_database, new_index_file = Database(new_paths[0], new_paths[1]), IndexFile(new_paths[2])
         new_database.initialize_empty_pages(new_number_of_pages)
-        #print(f"old num of pages: {self.database.number_of_pages()}, new num of pages: {new_number_of_pages}")
+
         page = b""
         current_page_index = 0
         num = 0
-        for record, _, _, _ in self.database.get_all_records():
+        for record, _, _, _, _ in self.database.get_all_records():
             if not new_index_file.entries:
                 new_index_file.add_index(record.key, 0)
             if record.deleted:
@@ -82,7 +80,6 @@ class SeqIndFile:
         self.database = new_database
         self.index_file = new_index_file
         print("REORGANIZED!")
-        #print(f"NEW DATABASE:")
         new_database.print_all_records()
         new_index_file.dump_to_file()
 

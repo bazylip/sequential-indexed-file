@@ -14,6 +14,9 @@ INITIAL_NO_OF_PAGES = CONFIG["INITIAL_NO_OF_PAGES"]
 MAX_KEY = CONFIG["MAX_KEY"]
 MAX_OVERFLOW_PAGE_NO = CONFIG["MAX_OVERFLOW_PAGE_NO"]
 ALPHA = CONFIG["ALPHA"]
+PRINT_DEBUG = CONFIG["PRINT_DEBUG"]
+PRINT_VERBOSE_RECORDS = CONFIG["PRINT_VERBOSE_RECORDS"]
+PRINT_DISK_OPERATIONS = CONFIG["PRINT_DISK_OPERATIONS"]
 PAGE_SIZE = RECORD_SIZE * BLOCKING_FACTOR
 PADDING_SYMBOL = b"\0" if CONFIG["PADDING_SYMBOL"] == "null" else CONFIG["PADDING_SYMBOL"].encode()
 
@@ -23,17 +26,20 @@ class Overflow:
         self.path = path
         self.current_page_index = 0
         self.current_offset = 0
+        self.disk_operations = 0
         self.clear_overflow()
 
     def clear_overflow(self):
         open(self.path, "w").close()
 
     def read_page(self, page_index: int):
+        self.disk_operations += 1
         with open(self.path, "br") as overflow:
             overflow.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             return overflow.read(PAGE_SIZE)
 
     def write_page(self, page_index: int, page: bytes):
+        self.disk_operations += 1
         with open(self.path, "br+") as overflow:
             overflow.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             overflow.write(page)
@@ -58,6 +64,7 @@ class Database:
         self.path = database_path
         self.overflow = Overflow(overflow_path)
         self.number_of_records = 0
+        self.disk_operations = 0
         self.clear_database()
         self.initialize_empty_pages()
         self.add_dummy_record()
@@ -107,38 +114,59 @@ class Database:
     def add_record(self, record: GradesRecord, page_index: int) -> bool:
         page = self.read_page(page_index)
         self.number_of_records += 1
+        self.disk_operations = 0
+        self.overflow.disk_operations = 0
 
         if self.page_size(page + record.to_bytes()) > PAGE_SIZE:
             record_str = str(record).rstrip("\n")
-            print(f"overflow: {record_str}")
             self.set_overflow(page, page_index, record)
+            if PRINT_DEBUG: print(f"OVERFLOW: {record_str}")
+            if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.disk_operations + self.overflow.disk_operations}")
             return self.overflow.current_page_index > MAX_OVERFLOW_PAGE_NO
 
         offset = self.get_offset(page, record)
         page = self.update_page(page, offset, record)
         record_str = str(record).rstrip("\n")
-        print(f"ADDING RECORD: {record_str} to page {page_index} at offset {offset}")
         self.write_page(page_index, page)
+        if PRINT_DEBUG: print(f"ADDING RECORD: {record_str} to page {page_index} at offset {offset}")
+        if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.disk_operations + self.overflow.disk_operations}")
         return self.overflow.current_page_index > MAX_OVERFLOW_PAGE_NO
 
     def update_record(self, new_record: GradesRecord, page_number: int):
-        for record, record_page_number, offset, in_overflow in self.get_all_records(page_number):
+        self.disk_operations = 0
+        self.overflow.disk_operations = 0
+
+        for record, record_page, record_page_number, offset, in_overflow in self.get_all_records(page_number):
             if record.key == new_record.key:
+                record_str = str(record).rstrip("\n")
+                if PRINT_DEBUG: print(f"UPDATING RECORD: {record_str}, {'in overflow ' if in_overflow else 'in main area'} in page {record_page_number} at offset {offset}")
+                record.id = new_record.id
+                record.grades = new_record.grades
+                record_page = self.update_page(record_page, offset, record, replace=True)
                 accessor = self.overflow if in_overflow else self
-                page = accessor.read_page(record_page_number)
-                page = self.update_page(page, offset, new_record, replace=True)
-                accessor.write_page(record_page_number, page)
+                accessor.write_page(record_page_number, record_page)
+                break
+
+        if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.disk_operations + self.overflow.disk_operations}")
 
     def delete_record(self, key: str, page_number: int):
-        for record, record_page_number, offset, in_overflow in self.get_all_records(page_number):
+        self.disk_operations = 0
+        self.overflow.disk_operations = 0
+
+        for record, record_page, record_page_number, offset, in_overflow in self.get_all_records(page_number):
             if record.key == key:
-                accessor = self.overflow if in_overflow else self
-                page = accessor.read_page(record_page_number)
+                record_str = str(record).rstrip("\n")
+                if PRINT_DEBUG: print(f"DELETING RECORD: {record_str}, {'in overflow ' if in_overflow else 'in main area'} in page {record_page_number} at offset {offset}")
                 record.deleted = True
-                page = self.update_page(page, offset, record, replace=True)
-                accessor.write_page(record_page_number, page)
+                record_page = self.update_page(record_page, offset, record, replace=True)
+                accessor = self.overflow if in_overflow else self
+                accessor.write_page(record_page_number, record_page)
+                break
+
+        if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.disk_operations + self.overflow.disk_operations}")
 
     def read_page(self, page_index: int) -> bytes:
+        self.disk_operations += 1
         with open(self.path, "rb") as database:
             database.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             return database.read(PAGE_SIZE)
@@ -151,6 +179,7 @@ class Database:
             i += 1
 
     def write_page(self, page_index: int, page: bytes):
+        self.disk_operations += 1
         with open(self.path, "rb+") as database:
             database.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             database.write(page)
@@ -199,16 +228,9 @@ class Database:
     def set_overflow(self, page: bytes, current_page_index: int, overflow_record: GradesRecord):
         overflow_pointer = self.overflow.get_new_pointer()
         record_to_update_page_index, record_to_update_offset = self.resolve_previous_record_in_main_area(page, current_page_index, overflow_record)
-        print(f"RECORD: {overflow_record} prev_page_index: {record_to_update_page_index}, prev_offset: {record_to_update_offset}")
-        print(f"OVERFLOW POINTER: {overflow_pointer}")
         if record_to_update_page_index != current_page_index:
             page = self.read_page(record_to_update_page_index)
             record_to_update_offset = self.get_last_offset_of_page(page)
-        """
-        if overflow_pointer[0] > MAX_OVERFLOW_PAGE_NO:
-            self.reorganize()
-            return
-        """
 
         while record_to_update := self.get_record_at_offset(record_to_update_offset, page) is None:
             record_to_update_page_index -= 1
@@ -277,18 +299,25 @@ class Database:
             for offset in range(BLOCKING_FACTOR):
                 record = self.get_record_at_offset(offset, page)
                 if record is not None:
-                    yield record, starting_page_num, offset, False
+                    yield record, page, starting_page_num, offset, False
+                    overflow_page_index, overflow_page = None, None
                     while record.pointer != (-1, -1):
+                        previous_page_index = overflow_page_index
                         overflow_page_index, overflow_offset = record.pointer[0], record.pointer[1]  # TODO: fix this not to read page each time
-                        overflow_page = self.overflow.read_page(overflow_page_index)
+                        if previous_page_index != overflow_page_index:
+                            overflow_page = self.overflow.read_page(overflow_page_index)
                         record = self.get_record_at_offset(overflow_offset, overflow_page)
-                        yield record, overflow_page_index, overflow_offset, True
+                        yield record, overflow_page, overflow_page_index, overflow_offset, True
             starting_page_num += 1
 
     def print_all_records(self, starting_page_num: int = 0, only_existing: bool = True):
-        for record, page, offset, is_overflow in self.get_all_records(starting_page_num):
-            if only_existing and not record.deleted:
+        for record, page, page_number, offset, is_overflow in self.get_all_records(starting_page_num):
+            if only_existing and record.deleted:
+                continue
+            if PRINT_VERBOSE_RECORDS:
                 print(f"page: {page}, offset: {offset}, overflow: {is_overflow}".ljust(40) +  f"{record}", end="")
+            else:
+                print(record, end="")
 
     def reorganize(self):
         new_path = self.path.split(".")[0] + "_reorganize." + self.path.split(".")[1]
