@@ -1,4 +1,3 @@
-import math
 import os
 import json
 import typing
@@ -26,20 +25,20 @@ class Overflow:
         self.path = path
         self.current_page_index = 0
         self.current_offset = 0
-        self.disk_operations = 0
+        self.current_disk_operations = 0
         self.clear_overflow()
 
     def clear_overflow(self):
         open(self.path, "w").close()
 
     def read_page(self, page_index: int):
-        self.disk_operations += 1
+        self.current_disk_operations += 1
         with open(self.path, "br") as overflow:
             overflow.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             return overflow.read(PAGE_SIZE)
 
     def write_page(self, page_index: int, page: bytes):
-        self.disk_operations += 1
+        self.current_disk_operations += 1
         with open(self.path, "br+") as overflow:
             overflow.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             overflow.write(page)
@@ -61,9 +60,16 @@ class Overflow:
 
 class Database:
     def __init__(self, database_path: str, overflow_path: str):
+        global MAX_OVERFLOW_PAGE_NO
+        global ALPHA
+        with open(CONFIG_PATH, "r") as json_config:
+            CONFIG = json.load(json_config)
+        MAX_OVERFLOW_PAGE_NO = CONFIG["MAX_OVERFLOW_PAGE_NO"]
+        ALPHA = CONFIG["ALPHA"]
         self.path = database_path
         self.overflow = Overflow(overflow_path)
         self.number_of_records = 0
+        self.current_disk_operations = 0
         self.disk_operations = 0
         self.clear_database()
         self.initialize_empty_pages()
@@ -114,14 +120,15 @@ class Database:
     def add_record(self, record: GradesRecord, page_index: int) -> bool:
         page = self.read_page(page_index)
         self.number_of_records += 1
-        self.disk_operations = 0
-        self.overflow.disk_operations = 0
+        self.current_disk_operations = 0
+        self.overflow.current_disk_operations = 0
 
         if self.page_size(page + record.to_bytes()) > PAGE_SIZE:
             record_str = str(record).rstrip("\n")
             self.set_overflow(page, page_index, record)
             if PRINT_DEBUG: print(f"OVERFLOW: {record_str}")
-            if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.disk_operations + self.overflow.disk_operations}")
+            if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.current_disk_operations + self.overflow.current_disk_operations}")
+            self.disk_operations += self.overflow.current_disk_operations
             return self.overflow.current_page_index > MAX_OVERFLOW_PAGE_NO
 
         offset = self.get_offset(page, record)
@@ -129,12 +136,12 @@ class Database:
         record_str = str(record).rstrip("\n")
         self.write_page(page_index, page)
         if PRINT_DEBUG: print(f"ADDING RECORD: {record_str} to page {page_index} at offset {offset}")
-        if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.disk_operations + self.overflow.disk_operations}")
+        if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.current_disk_operations + self.overflow.current_disk_operations}")
         return self.overflow.current_page_index > MAX_OVERFLOW_PAGE_NO
 
     def update_record(self, new_record: GradesRecord, page_number: int):
-        self.disk_operations = 0
-        self.overflow.disk_operations = 0
+        self.current_disk_operations = 0
+        self.overflow.current_disk_operations = 0
 
         for record, record_page, record_page_number, offset, in_overflow in self.get_all_records(page_number):
             if record.key == new_record.key:
@@ -147,11 +154,12 @@ class Database:
                 accessor.write_page(record_page_number, record_page)
                 break
 
-        if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.disk_operations + self.overflow.disk_operations}")
+        if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.current_disk_operations + self.overflow.current_disk_operations}")
+        self.disk_operations += self.overflow.current_disk_operations
 
     def delete_record(self, key: str, page_number: int):
-        self.disk_operations = 0
-        self.overflow.disk_operations = 0
+        self.current_disk_operations = 0
+        self.overflow.current_disk_operations = 0
 
         for record, record_page, record_page_number, offset, in_overflow in self.get_all_records(page_number):
             if record.key == key:
@@ -163,9 +171,11 @@ class Database:
                 accessor.write_page(record_page_number, record_page)
                 break
 
-        if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.disk_operations + self.overflow.disk_operations}")
+        if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.current_disk_operations + self.overflow.current_disk_operations}")
+        self.disk_operations += self.overflow.current_disk_operations
 
     def read_page(self, page_index: int) -> bytes:
+        self.current_disk_operations += 1
         self.disk_operations += 1
         with open(self.path, "rb") as database:
             database.seek(page_index * PAGE_SIZE, os.SEEK_SET)
@@ -179,6 +189,7 @@ class Database:
             i += 1
 
     def write_page(self, page_index: int, page: bytes):
+        self.current_disk_operations += 1
         self.disk_operations += 1
         with open(self.path, "rb+") as database:
             database.seek(page_index * PAGE_SIZE, os.SEEK_SET)
@@ -315,6 +326,6 @@ class Database:
             if only_existing and record.deleted:
                 continue
             if PRINT_VERBOSE_RECORDS:
-                print(f"page: {page}, offset: {offset}, overflow: {is_overflow}".ljust(40) +  f"{record}", end="")
+                print(f"page: {page_number}, offset: {offset}, overflow: {is_overflow}".ljust(40) +  f"{record}", end="")
             else:
                 print(record, end="")

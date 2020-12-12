@@ -1,5 +1,7 @@
 import random
 import json
+import itertools
+import copy
 from record import GradesRecord
 from seq_ind_file import SeqIndFile
 
@@ -10,23 +12,36 @@ with open(CONFIG_PATH, "r") as json_config:
 MAX_KEY = CONFIG["MAX_KEY"]
 N_RANDOM_DATA = CONFIG["N_RANDOM_DATA"]
 PRINT_AFTER_EACH_OPERATION = CONFIG["PRINT_AFTER_EACH_OPERATION"]
+PRINT_DISK_OPERATIONS = CONFIG["PRINT_DISK_OPERATIONS"]
 
-def generate_random_data():
+def generate_random_data(print_at_end: bool = True):
+    seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
     for i in range(N_RANDOM_DATA):
         key = str(random.randrange(MAX_KEY)).rjust(len(str(MAX_KEY)), "0")
         record = GradesRecord(key)
         seq_ind_file.add_record(record)
+
+        #with open("data/experiment_data.txt", "a") as experiment_data:
+        #    experiment_data.write(f"A {record.key} {record.id} {record.grades[0]} {record.grades[1]} {record.grades[2]}\n")
+
         if PRINT_AFTER_EACH_OPERATION:
             print(f"\nFILE AFTER OPERATION NUMBER {i + 1}")
             seq_ind_file.print_records()
 
-    print("\nFINAL FILE:")
-    seq_ind_file.print_records()
+    if print_at_end:
+        print("\nFINAL FILE:")
+        seq_ind_file.print_records()
 
-def load_data_from_file():
+    if PRINT_DISK_OPERATIONS:
+        print(f"OVERALL DISK OPERATIONS: {seq_ind_file.database.disk_operations}")
+
+    return seq_ind_file.database.disk_operations
+
+def load_data_from_file(data_source: str = "data/input.txt", print_at_end: bool = True):
+    seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
     commands = {"A": seq_ind_file.add_record, "U": seq_ind_file.update_record, "D": seq_ind_file.delete_record}
 
-    with open("data/input.txt") as input_file:
+    with open(data_source) as input_file:
         for i, input_line in enumerate(input_file.readlines()):
             input_line = input_line.rstrip("\n").split(" ")
             command = commands.get(input_line[0])
@@ -36,13 +51,34 @@ def load_data_from_file():
                 print(f"\nFILE AFTER OPERATION NUMBER {i+1}")
                 seq_ind_file.print_records()
 
-    print("\nFINAL FILE:")
-    seq_ind_file.print_records()
+    if print_at_end:
+        print("\nFINAL FILE:")
+        seq_ind_file.print_records()
+
+    if PRINT_DISK_OPERATIONS:
+        print(f"OVERALL DISK OPERATIONS: {seq_ind_file.database.disk_operations}")
+
+    return seq_ind_file.database.disk_operations
 
 def experiment():
-    pass
+    alphas = [i*0.1 for i in range(1, 10)]
+    max_overflow_no_of_pages = [i for i in range(1, 10)]
+    results = []
 
-seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
+    for alpha, max_overflow_pages in itertools.product(alphas, max_overflow_no_of_pages):
+        new_config = copy.deepcopy(CONFIG)
+        new_config["ALPHA"] = alpha
+        new_config["MAX_OVERFLOW_PAGE_NO"] = max_overflow_pages
+        with open(CONFIG_PATH, "w") as json_config:
+            json.dump(new_config, json_config)
+        disk_operations = load_data_from_file(data_source="data/experiment_data.txt", print_at_end=False)
+        print(f"ALPHA: {alpha}, MAX OVERFLOW PAGES: {max_overflow_pages}, DISK OP: {disk_operations}")
+        results.append(disk_operations)
+
+    print(results)
+    with open(CONFIG_PATH, "w") as json_config:
+        json.dump(CONFIG, json_config, indent=4)
+
 method_function = {1: generate_random_data, 2: load_data_from_file, 3: experiment}
 
 if __name__ == "__main__":

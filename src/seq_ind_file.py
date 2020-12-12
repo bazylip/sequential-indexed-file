@@ -13,37 +13,44 @@ with open(CONFIG_PATH, "r") as json_config:
 BLOCKING_FACTOR = CONFIG["BLOCKING_FACTOR"]
 INITIAL_NO_OF_PAGES = CONFIG["INITIAL_NO_OF_PAGES"]
 MAX_KEY = CONFIG["MAX_KEY"]
+RECORD_SIZE = CONFIG["RECORD_SIZE"]
+PRINT_DEBUG = CONFIG["PRINT_DEBUG"]
 MAX_OVERFLOW_PAGE_NO = CONFIG["MAX_OVERFLOW_PAGE_NO"]
 ALPHA = CONFIG["ALPHA"]
-RECORD_SIZE = CONFIG["RECORD_SIZE"]
 
 
 class SeqIndFile:
     def __init__(self, database_path: str, overflow_path: str, index_file_path: str):
+        global MAX_OVERFLOW_PAGE_NO
+        global ALPHA
+        with open(CONFIG_PATH, "r") as json_config:
+            CONFIG = json.load(json_config)
+        MAX_OVERFLOW_PAGE_NO = CONFIG["MAX_OVERFLOW_PAGE_NO"]
+        ALPHA = CONFIG["ALPHA"]
         self.database = Database(database_path, overflow_path)
         self.index_file = IndexFile(index_file_path)
         self.index_file.initialize_indexes()
 
-    def add_record(self, record: GradesRecord):
+    def add_record(self, record: GradesRecord) -> None:
         page_number = self.index_file.get_page_to_insert(record)
         reorganize = self.database.add_record(record, page_number)
         if reorganize:
             self.reorganize()
 
-    def get_record(self, key: str):
+    def get_record(self, key: str) -> GradesRecord:
         page_number = self.index_file.get_page_of_key(key)
         page = self.database.read_page(page_number)
         return self.database.get_record_by_key(key, page)
 
-    def delete_record(self, key: str):
+    def delete_record(self, key: str) -> None:
         page_number = self.index_file.get_page_of_key(key)
         self.database.delete_record(key, page_number)
 
-    def update_record(self, new_record: GradesRecord):
+    def update_record(self, new_record: GradesRecord) -> None:
         page_number = self.index_file.get_page_of_key(new_record.key)
         self.database.update_record(new_record, page_number)
 
-    def reorganize(self):
+    def reorganize(self) -> None:
         old_paths = [self.database.path, self.database.overflow.path, self.index_file.path]
         new_paths = [old_path.split(".")[0] + "_reorg." + old_path.split(".")[1] for old_path in old_paths]
 
@@ -59,7 +66,7 @@ class SeqIndFile:
                 new_index_file.add_index(record.key, 0)
             if record.deleted:
                 continue
-            if new_database.page_size(page) == RECORD_SIZE * BLOCKING_FACTOR * ALPHA:
+            if new_database.page_size(page) >= RECORD_SIZE * BLOCKING_FACTOR * ALPHA:
                 new_database.write_page(current_page_index, page)
                 current_page_index += 1
                 page = b""
@@ -79,9 +86,8 @@ class SeqIndFile:
         new_index_file.path = old_paths[2]
         self.database = new_database
         self.index_file = new_index_file
-        print("REORGANIZED!")
-        new_database.print_all_records()
+        if PRINT_DEBUG: print("REORGANIZED!")
         new_index_file.dump_to_file()
 
-    def print_records(self, only_existing: bool = True):
+    def print_records(self, only_existing: bool = True) -> None:
         self.database.print_all_records(0, only_existing)
