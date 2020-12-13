@@ -2,6 +2,7 @@ import random
 import json
 import itertools
 import copy
+import time
 from record import GradesRecord
 from seq_ind_file import SeqIndFile
 
@@ -13,6 +14,7 @@ MAX_KEY = CONFIG["MAX_KEY"]
 N_RANDOM_DATA = CONFIG["N_RANDOM_DATA"]
 PRINT_AFTER_EACH_OPERATION = CONFIG["PRINT_AFTER_EACH_OPERATION"]
 PRINT_DISK_OPERATIONS = CONFIG["PRINT_DISK_OPERATIONS"]
+
 
 def generate_random_data(print_at_end: bool = True):
     seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
@@ -37,6 +39,7 @@ def generate_random_data(print_at_end: bool = True):
 
     return seq_ind_file.database.disk_operations
 
+
 def load_data_from_file(data_source: str = "data/input.txt", print_at_end: bool = True):
     seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
     commands = {"A": seq_ind_file.add_record, "U": seq_ind_file.update_record, "D": seq_ind_file.delete_record}
@@ -60,6 +63,7 @@ def load_data_from_file(data_source: str = "data/input.txt", print_at_end: bool 
 
     return seq_ind_file.database.disk_operations
 
+
 def experiment():
     alphas = [i*0.1 for i in range(1, 10)]
     max_overflow_no_of_pages = [i for i in range(1, 10)]
@@ -71,13 +75,15 @@ def experiment():
         new_config["MAX_OVERFLOW_PAGE_NO"] = max_overflow_pages
         with open(CONFIG_PATH, "w") as json_config:
             json.dump(new_config, json_config)
-        disk_operations = load_data_from_file(data_source="data/experiment_data.txt", print_at_end=False)
-        print(f"ALPHA: {alpha}, MAX OVERFLOW PAGES: {max_overflow_pages}, DISK OP: {disk_operations}")
+        start = time.time()
+        disk_operations = load_data_from_file(data_source="data/experiment/experiment_data.txt", print_at_end=False)
+        end = time.time()
+        print(f"ALPHA: {alpha}, MAX OVERFLOW PAGES: {max_overflow_pages}, DISK OP: {disk_operations}, TIME: {end-start}")
         results.append(disk_operations)
 
-    print(results)
     with open(CONFIG_PATH, "w") as json_config:
         json.dump(CONFIG, json_config, indent=4)
+
 
 method_function = {1: generate_random_data, 2: load_data_from_file, 3: experiment}
 
