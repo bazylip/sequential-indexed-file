@@ -6,7 +6,7 @@
     "INITIAL_NO_OF_PAGES": 6,
     "PADDING_SYMBOL": "null",
     "MAX_OVERFLOW_PAGE_NO": 3,
-    "N_RANDOM_DATA": 50,
+    "N_RANDOM_DATA": 20,
     "PRINT_DEBUG": false,
     "PRINT_VERBOSE_RECORDS": false,
     "PRINT_DISK_OPERATIONS": false,

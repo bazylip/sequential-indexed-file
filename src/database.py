@@ -97,9 +97,11 @@ class Database:
         self.number_of_records = 0
         self.current_disk_operations = 0
         self.disk_operations = 0
+        self.dummy_record_key = None
         self.clear_database()
         self.initialize_empty_pages()
         self.add_dummy_record()
+        self.dummy_record = True
 
     def clear_database(self) -> None:
         """
@@ -123,8 +125,8 @@ class Database:
         Add dummy record with first possible key to beginning of database
         :return: None
         """
-        first_key = "".rjust(len(str(MAX_KEY)), "0")
-        dummy_record = GradesRecord(first_key)
+        self.dummy_record_key = "".rjust(len(str(MAX_KEY)), "0")
+        dummy_record = GradesRecord(self.dummy_record_key)
         self.add_record(dummy_record, 0)
 
     def generate_record_from_string_list(self, record: typing.List[str]) -> GradesRecord:
@@ -184,6 +186,9 @@ class Database:
         self.number_of_records += 1
         self.current_disk_operations = 0
         self.overflow.current_disk_operations = 0
+
+        if record.key == self.dummy_record_key:
+            self.dummy_record = False
 
         if self.page_size(page + record.to_bytes()) > PAGE_SIZE:
             record_str = str(record).rstrip("\n")
@@ -461,6 +466,8 @@ class Database:
         """
         for record, page, page_number, offset, is_overflow in self.get_all_records(starting_page_num):
             if only_existing and record.deleted:
+                continue
+            if self.dummy_record and record.key == self.dummy_record_key:
                 continue
             if PRINT_VERBOSE_RECORDS:
                 print(f"page: {page_number}, offset: {offset}, overflow: {is_overflow}".ljust(40) +  f"{record}", end="")
