@@ -17,6 +17,7 @@ PRINT_DISK_OPERATIONS = CONFIG["PRINT_DISK_OPERATIONS"]
 
 
 def generate_random_data(print_at_end: bool = True):
+    """Initialize sequential-indexed file with random data"""
     seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
     for i in range(N_RANDOM_DATA):
         key = str(random.randrange(MAX_KEY)).rjust(len(str(MAX_KEY)), "0")
@@ -41,6 +42,7 @@ def generate_random_data(print_at_end: bool = True):
 
 
 def load_data_from_file(data_source: str = "data/input.txt", print_at_end: bool = True):
+    """Load data from file and create sequential-indexed file from it"""
     seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
     commands = {"A": seq_ind_file.add_record, "U": seq_ind_file.update_record, "D": seq_ind_file.delete_record}
 
@@ -65,6 +67,7 @@ def load_data_from_file(data_source: str = "data/input.txt", print_at_end: bool 
 
 
 def experiment():
+    """Run experiment and save results to file"""
     alphas = [i*0.1 for i in range(1, 10)]
     max_overflow_no_of_pages = [i for i in range(1, 10)]
     results = []

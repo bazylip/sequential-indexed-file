@@ -21,6 +21,7 @@ PADDING_SYMBOL = b"\0" if CONFIG["PADDING_SYMBOL"] == "null" else CONFIG["PADDIN
 
 
 class Overflow:
+    """Overflow area of the file"""
     def __init__(self, path: str):
         self.path = path
         self.current_page_index = 0
@@ -28,25 +29,49 @@ class Overflow:
         self.current_disk_operations = 0
         self.clear_overflow()
 
-    def clear_overflow(self):
+    def clear_overflow(self) -> None:
+        """
+        Remove contents in overflow path
+        :return: None
+        """
         open(self.path, "w").close()
 
-    def read_page(self, page_index: int):
+    def read_page(self, page_index: int) -> bytes:
+        """
+        Read page at index from overflow
+        :param page_index: Index to read page from
+        :return: Page in bytes
+        """
         self.current_disk_operations += 1
         with open(self.path, "br") as overflow:
             overflow.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             return overflow.read(PAGE_SIZE)
 
-    def write_page(self, page_index: int, page: bytes):
+    def write_page(self, page_index: int, page: bytes) -> None:
+        """
+        Read page at index to overflow
+        :param page_index: Index to write page at
+        :param page: Page to be written
+        :return: None
+        """
         self.current_disk_operations += 1
         with open(self.path, "br+") as overflow:
             overflow.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             overflow.write(page)
 
     def get_new_pointer(self) -> typing.Tuple[int, int]:
+        """
+        Get current pointer of overflow
+        :return: Page and offset of current pointer
+        """
         return self.current_page_index, self.current_offset
 
-    def add_record(self, record: GradesRecord):
+    def add_record(self, record: GradesRecord) -> typing.Tuple[int, int]:
+        """
+        Add record to overflow and return its pointer
+        :param record: Record to add
+        :return: Pointer of newly added record
+        """
         page = self.read_page(self.current_page_index)
         page = page[:self.current_offset * RECORD_SIZE] + record.to_bytes() + page[self.current_offset * RECORD_SIZE:]
         self.write_page(self.current_page_index, page)
@@ -59,6 +84,7 @@ class Overflow:
 
 
 class Database:
+    """Area of the file where records are stored (main area + overflow)"""
     def __init__(self, database_path: str, overflow_path: str):
         global MAX_OVERFLOW_PAGE_NO
         global ALPHA
@@ -75,20 +101,38 @@ class Database:
         self.initialize_empty_pages()
         self.add_dummy_record()
 
-    def clear_database(self):
+    def clear_database(self) -> None:
+        """
+        Remove contents in database path
+        :return: None
+        """
         open(self.path, "w").close()
 
-    def initialize_empty_pages(self, number_of_pages: int = INITIAL_NO_OF_PAGES):
+    def initialize_empty_pages(self, number_of_pages: int = INITIAL_NO_OF_PAGES) -> None:
+        """
+        Initialize main area with empty pages
+        :param number_of_pages: Number of empty pages
+        :return: None
+        """
         for i in range(number_of_pages):
             empty_page = PADDING_SYMBOL*PAGE_SIZE
             self.write_page(i, empty_page)
 
-    def add_dummy_record(self):
+    def add_dummy_record(self) -> None:
+        """
+        Add dummy record with first possible key to beginning of database
+        :return: None
+        """
         first_key = "".rjust(len(str(MAX_KEY)), "0")
         dummy_record = GradesRecord(first_key)
         self.add_record(dummy_record, 0)
 
-    def generate_record_from_string_list(self, record: typing.List[str]):
+    def generate_record_from_string_list(self, record: typing.List[str]) -> GradesRecord:
+        """
+        Generate new record from provided list of strings
+        :param record: List of strings
+        :return: New record created from the list
+        """
         key = record[0]
         pointer = (-1, -1) if (record[1].split(":")[0], record[1].split(":")[1]) == ("x", "x") else (int(record[1].split(":")[0]), int(record[1].split(":")[1]))
         id = int(record[2])
@@ -98,6 +142,12 @@ class Database:
         return GradesRecord(key, id, grades, pointer, deleted)
 
     def get_record_by_key(self, key: str, page: bytes) -> typing.Optional[GradesRecord]:
+        """
+        Retrieve record from the page by key
+        :param key: Key of record
+        :param page: Page where the record will be searched for
+        :return: Record if present, None otherwise
+        """
         page = page.decode().split("\n")
         found_records = [s for s in page if s.startswith(key)]
 
@@ -109,6 +159,12 @@ class Database:
         return self.generate_record_from_string_list(record)
 
     def get_record_at_offset(self, offset: int, page: bytes) -> typing.Optional[GradesRecord]:
+        """
+        Retrieve record from the page at offset
+        :param offset: Offset in the page
+        :param page: Page where the record will be searched for
+        :return: Record at offset
+        """
         page = page.replace(PADDING_SYMBOL, b"")
         page = page.decode().split("\n")
         page = [record for record in page if record]
@@ -118,6 +174,12 @@ class Database:
         return self.generate_record_from_string_list(record)
 
     def add_record(self, record: GradesRecord, page_index: int) -> bool:
+        """
+        Add new record to page at index
+        :param record: New record to be added
+        :param page_index: Page number where the record should be inserted to
+        :return: True if file should be reorganized, False otherwise
+        """
         page = self.read_page(page_index)
         self.number_of_records += 1
         self.current_disk_operations = 0
@@ -139,7 +201,13 @@ class Database:
         if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.current_disk_operations + self.overflow.current_disk_operations}")
         return self.overflow.current_page_index > MAX_OVERFLOW_PAGE_NO
 
-    def update_record(self, new_record: GradesRecord, page_number: int):
+    def update_record(self, new_record: GradesRecord, page_number: int) -> None:
+        """
+        Update record at page index, records are compared by key
+        :param new_record: New record with same key as old record
+        :param page_number: Page number where the record will be searched for
+        :return: None
+        """
         self.current_disk_operations = 0
         self.overflow.current_disk_operations = 0
 
@@ -157,7 +225,13 @@ class Database:
         if PRINT_DISK_OPERATIONS: print(f"DISK OPERATIONS: {self.current_disk_operations + self.overflow.current_disk_operations}")
         self.disk_operations += self.overflow.current_disk_operations
 
-    def delete_record(self, key: str, page_number: int):
+    def delete_record(self, key: str, page_number: int) -> None:
+        """
+        Delete record with key at page index
+        :param key: Key of record to be deleted
+        :param page_number: Page number where the record will be searched for
+        :return: None
+        """
         self.current_disk_operations = 0
         self.overflow.current_disk_operations = 0
 
@@ -175,27 +249,50 @@ class Database:
         self.disk_operations += self.overflow.current_disk_operations
 
     def read_page(self, page_index: int) -> bytes:
+        """
+        Read page at index
+        :param page_index: Index of page from which it will be read
+        :return: Page in bytes
+        """
         self.current_disk_operations += 1
         self.disk_operations += 1
         with open(self.path, "rb") as database:
             database.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             return database.read(PAGE_SIZE)
 
-    def read_all_pages(self):
+    def read_all_pages(self) -> None:
+        """
+        Print contents of all pages
+        :return: None
+        """
         i = 0
         while page := self.read_page(i):
             print(f"PAGE {i}:")
             print(page.decode())
             i += 1
 
-    def write_page(self, page_index: int, page: bytes):
+    def write_page(self, page_index: int, page: bytes) -> None:
+        """
+        Write new page at index or replace old when if it exists
+        :param page_index: Index of page where it will be written
+        :param page: New page to be written
+        :return: None
+        """
         self.current_disk_operations += 1
         self.disk_operations += 1
         with open(self.path, "rb+") as database:
             database.seek(page_index * PAGE_SIZE, os.SEEK_SET)
             database.write(page)
 
-    def update_page(self, page: bytes, offset: int, record: GradesRecord, replace: bool = False):
+    def update_page(self, page: bytes, offset: int, record: GradesRecord, replace: bool = False) -> bytes:
+        """
+        Update a page at offset
+        :param page: Page to be updated
+        :param offset: Offset at which to update the page
+        :param record: Record to write in page at offset
+        :param replace: True if existing record should be replaced, False if it should be appended
+        :return: Updated page
+        """
         if not replace:
             page = page[:offset * RECORD_SIZE] + record.to_bytes() + page[offset * RECORD_SIZE:]
             return page[:PAGE_SIZE]
@@ -203,10 +300,21 @@ class Database:
             page = page[:offset * RECORD_SIZE] + record.to_bytes() + page[offset * RECORD_SIZE + RECORD_SIZE:]
             return page
 
-    def page_size(self, page: bytes):
+    def page_size(self, page: bytes) -> int:
+        """
+        Return size of a page
+        :param page: Page to get size of
+        :return: Size of page
+        """
         return len(page.replace(PADDING_SYMBOL, b""))
 
     def get_offset(self, page: bytes, record: GradesRecord) -> int:
+        """
+        Get offset of record in page
+        :param page: Page where the record is present
+        :param record: Record to get offset of
+        :return: Offset of record in page
+        """
         key = record.key.encode()
         page = page.replace(PADDING_SYMBOL, b"")
         if len(set(page)) <= 1:  # page is empty
@@ -220,6 +328,11 @@ class Database:
         return len(page_keys)
 
     def get_last_offset_of_page(self, page: bytes) -> int:
+        """
+        Get offset of last existing record in page
+        :param page: Page to get last offset
+        :return: Offset of last existing record
+        """
         page = page.replace(PADDING_SYMBOL, b"")
         if len(set(page)) <= 1:  # page is empty
             return 0
@@ -227,7 +340,11 @@ class Database:
         page_keys = [k for k in page_keys if k]  # remove empty strings
         return len(page_keys)-1
 
-    def number_of_pages(self):
+    def number_of_pages(self) -> int:
+        """
+        Get number of pages in whole file
+        :return: Number of pages in main area + overflow
+        """
         accessors, pages = [self, self.overflow], 0
         for accessor in accessors:
             i = 0
@@ -236,7 +353,14 @@ class Database:
             pages += i
         return pages
 
-    def set_overflow(self, page: bytes, current_page_index: int, overflow_record: GradesRecord):
+    def set_overflow(self, page: bytes, current_page_index: int, overflow_record: GradesRecord) -> None:
+        """
+        Set overflow of record which is supposed to be added to a page
+        :param page: Page of main area where the file should be added to
+        :param current_page_index: Index of page
+        :param overflow_record: Record to be added to file
+        :return: None
+        """
         overflow_pointer = self.overflow.get_new_pointer()
         record_to_update_page_index, record_to_update_offset = self.resolve_previous_record_in_main_area(page, current_page_index, overflow_record)
         if record_to_update_page_index != current_page_index:
@@ -294,15 +418,22 @@ class Database:
 
         self.overflow.add_record(overflow_record)
 
-    def resolve_previous_record_in_main_area(self, page: bytes, current_page_index: int, record: GradesRecord):
+    def resolve_previous_record_in_main_area(self, page: bytes, current_page_index: int, record: GradesRecord) -> typing.Tuple[int, int]:
+        """
+        Get page index and offset of preceding record in main area
+        :param page: Page where the record is stored
+        :param current_page_index: Index of page
+        :param record: Record to be resolved
+        :return: Page index and offset of preceding record in main area
+        """
         offset = self.get_offset(page, record) - 1
         if offset == -1:
             current_page_index -= 1
         return current_page_index, offset
 
-    def get_all_records(self, starting_page_num: int = 0):
+    def get_all_records(self, starting_page_num: int = 0) -> typing.Generator:
         """
-
+        Yield all records in file
         :param starting_page_num: Page to start
         :return: Record, number of page, current offset, is in overflow
         """
@@ -321,7 +452,13 @@ class Database:
                         yield record, overflow_page, overflow_page_index, overflow_offset, True
             starting_page_num += 1
 
-    def print_all_records(self, starting_page_num: int = 0, only_existing: bool = True):
+    def print_all_records(self, starting_page_num: int = 0, only_existing: bool = True) -> None:
+        """
+        Print all records in file
+        :param starting_page_num: Page from which to start printing
+        :param only_existing: Only print non-deleted records
+        :return: None
+        """
         for record, page, page_number, offset, is_overflow in self.get_all_records(starting_page_num):
             if only_existing and record.deleted:
                 continue

@@ -2,7 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 
-with open("data/experiment/experiment_results_delete_1000.txt", "r") as results, open("data/experiment/results.txt", "w") as output:
+RESULTS_PATH = "data/experiment/experiment_results_delete_1000.txt"
+
+with open(RESULTS_PATH, "r") as results, open("data/experiment/results.txt", "w") as output:
     for line in results.readlines():
         line_list = line.split(" ")
         output.write(line_list[1][:-1] + " " + line_list[5][:-1] + " " + line_list[8][:-1] + " " + line_list[10])

@@ -20,6 +20,7 @@ ALPHA = CONFIG["ALPHA"]
 
 
 class SeqIndFile:
+    """Sequential-indexed file"""
     def __init__(self, database_path: str, overflow_path: str, index_file_path: str):
         global MAX_OVERFLOW_PAGE_NO
         global ALPHA
@@ -32,25 +33,49 @@ class SeqIndFile:
         self.index_file.initialize_indexes()
 
     def add_record(self, record: GradesRecord) -> None:
+        """
+        Add new record to file, reorganize afterwards if needed
+        :param record: Record to be added
+        :return: None
+        """
         page_number = self.index_file.get_page_to_insert(record)
         reorganize = self.database.add_record(record, page_number)
         if reorganize:
             self.reorganize()
 
     def get_record(self, key: str) -> GradesRecord:
+        """
+        Get record with matching key
+        :param key: Key of record to be returned
+        :return: Record with matching key
+        """
         page_number = self.index_file.get_page_of_key(key)
         page = self.database.read_page(page_number)
         return self.database.get_record_by_key(key, page)
 
     def delete_record(self, key: str) -> None:
+        """
+        Delete record with matching key
+        :param key: Key of record to be deleted
+        :return: None
+        """
         page_number = self.index_file.get_page_of_key(key)
         self.database.delete_record(key, page_number)
 
     def update_record(self, new_record: GradesRecord) -> None:
+        """
+        Update record with key matching to new one
+        :param new_record: New record to replace the old one with matching key
+        :return: None
+        """
         page_number = self.index_file.get_page_of_key(new_record.key)
         self.database.update_record(new_record, page_number)
 
     def reorganize(self) -> None:
+        """
+        Reorganize file
+        :return: None
+        """
         old_paths = [self.database.path, self.database.overflow.path, self.index_file.path]
         new_paths = [old_path.split(".")[0] + "_reorg." + old_path.split(".")[1] for old_path in old_paths]
 
@@ -90,4 +115,9 @@ class SeqIndFile:
         new_index_file.dump_to_file()
 
     def print_records(self, only_existing: bool = True) -> None:
+        """
+        Print all record from file
+        :param only_existing: Print only non-deleted records
+        :return: None
+        """
         self.database.print_all_records(0, only_existing)
