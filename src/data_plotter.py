@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 
-RESULTS_PATH = "data/experiment/experiment_results_update_1000.txt"
+RESULTS_PATH = "data/experiment/experiment_results_delete_1000.txt"
 
 with open(RESULTS_PATH, "r") as results, open("data/experiment/results.txt", "w") as output:
     for line in results.readlines():
@@ -30,7 +30,7 @@ surface = ax.plot_surface(max_pages, alphas, time, cmap=cm.coolwarm,
 ax.set_xlabel('Max overflow pages')
 ax.set_ylabel('Alpha')
 ax.set_zlabel('Time')
-plt.savefig("data/plots/plot_time_update_1000.png")
+plt.savefig("data/plots/plot_time_delete_1000.png")
 
 fig = plt.figure()
 ax = fig.gca(projection='3d')
@@ -39,6 +39,6 @@ surface = ax.plot_surface(max_pages, alphas, disk_operations, cmap=cm.coolwarm,
 ax.view_init(30, 60)
 ax.set_xlabel('Max overflow pages')
 ax.set_ylabel('Alpha')
-ax.set_zlabel('Time')
+ax.set_zlabel('Disk operations')
 
-plt.savefig("data/plots/plot_disk_update_1000.png")
+plt.savefig("data/plots/plot_disk_delete_1000.png")
