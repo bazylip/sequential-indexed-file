@@ -109,6 +109,9 @@ class SeqIndFile:
         new_database.path = old_paths[0]
         new_database.overflow.path = old_paths[1]
         new_index_file.path = old_paths[2]
+        new_database.dummy_record = self.database.dummy_record
+        new_database.dummy_record_key = self.database.dummy_record_key
+        new_database.disk_operations = self.database.disk_operations
         self.database = new_database
         self.index_file = new_index_file
         if PRINT_DEBUG: print("REORGANIZED!")

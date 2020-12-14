@@ -24,8 +24,8 @@ def generate_random_data(print_at_end: bool = True):
         record = GradesRecord(key)
         seq_ind_file.add_record(record)
 
-        #with open("data/experiment_data.txt", "a") as experiment_data:
-        #    experiment_data.write(f"A {record.key} {record.id} {record.grades[0]} {record.grades[1]} {record.grades[2]}\n")
+        with open("data/experiment/experiment_data.txt", "a") as experiment_data:
+            experiment_data.write(f"A {record.key} {record.id} {record.grades[0]} {record.grades[1]} {record.grades[2]}\n")
 
         if PRINT_AFTER_EACH_OPERATION:
             print(f"\nFILE AFTER OPERATION NUMBER {i + 1}")
@@ -68,7 +68,7 @@ def load_data_from_file(data_source: str = "data/input.txt", print_at_end: bool 
 
 def experiment():
     """Run experiment and save results to file"""
-    alphas = [i*0.1 for i in range(1, 10)]
+    alphas = [i*0.1 for i in range(1, 8)]
     max_overflow_no_of_pages = [i for i in range(1, 10)]
     results = []
 
