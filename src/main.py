@@ -95,5 +95,4 @@ if __name__ == "__main__":
     print("2. Load data from file")
     print("3. Run experiment")
     choice = int(input("Choose data loading method: "))
-
     method_function.get(choice)()
