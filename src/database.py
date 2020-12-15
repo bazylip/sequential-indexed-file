@@ -98,6 +98,7 @@ class Database:
         self.current_disk_operations = 0
         self.disk_operations = 0
         self.dummy_record_key = None
+        self.dummy_record = None
         self.clear_database()
         self.initialize_empty_pages()
         self.add_dummy_record()
@@ -127,6 +128,7 @@ class Database:
         """
         self.dummy_record_key = "".rjust(len(str(MAX_KEY)), "0")
         dummy_record = GradesRecord(self.dummy_record_key)
+        print(f"adding dummy record: {dummy_record}")
         self.add_record(dummy_record, 0)
 
     def generate_record_from_string_list(self, record: typing.List[str]) -> GradesRecord:
@@ -187,8 +189,11 @@ class Database:
         self.current_disk_operations = 0
         self.overflow.current_disk_operations = 0
 
-        if record.key == self.dummy_record_key:
+        if self.dummy_record is not None and record.key == self.dummy_record_key:
             self.dummy_record = False
+            print(f"updating dummy record: {record}, index: {page_index}")
+            self.update_record(record, 0)
+            return False
 
         if self.page_size(page + record.to_bytes()) > PAGE_SIZE:
             record_str = str(record).rstrip("\n")
