@@ -128,7 +128,6 @@ class Database:
         """
         self.dummy_record_key = "".rjust(len(str(MAX_KEY)), "0")
         dummy_record = GradesRecord(self.dummy_record_key)
-        print(f"adding dummy record: {dummy_record}")
         self.add_record(dummy_record, 0)
 
     def generate_record_from_string_list(self, record: typing.List[str]) -> GradesRecord:
@@ -191,7 +190,6 @@ class Database:
 
         if self.dummy_record is not None and record.key == self.dummy_record_key:
             self.dummy_record = False
-            print(f"updating dummy record: {record}, index: {page_index}")
             self.update_record(record, 0)
             return False
 
