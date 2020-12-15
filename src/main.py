@@ -35,9 +35,6 @@ def generate_random_data(print_at_end: bool = True):
         print("\nFINAL FILE:")
         seq_ind_file.print_records()
 
-    if PRINT_DISK_OPERATIONS:
-        print(f"OVERALL DISK OPERATIONS: {seq_ind_file.database.disk_operations}")
-
     return seq_ind_file.database.disk_operations
 
 
@@ -60,10 +57,32 @@ def load_data_from_file(data_source: str = "data/input.txt", print_at_end: bool 
         print("\nFINAL FILE:")
         seq_ind_file.print_records()
 
-    if PRINT_DISK_OPERATIONS:
-        print(f"OVERALL DISK OPERATIONS: {seq_ind_file.database.disk_operations}")
+    return seq_ind_file.database.disk_operations
+
+
+def load_interactive_data(print_at_end: bool = True):
+    """Load data from user interactively"""
+    seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
+    commands = {"A": seq_ind_file.add_record, "U": seq_ind_file.update_record, "D": seq_ind_file.delete_record}
+    i = 1
+
+    while input_line := input("Record: "):
+        input_line = input_line.rstrip("\n").split(" ")
+        command = commands.get(input_line[0])
+        arguments = input_line[1].rjust(len(str(MAX_KEY)), "0") if input_line[0] == "D" else GradesRecord(
+            input_line[1].rjust(len(str(MAX_KEY)), "0"), int(input_line[2]), [input_line[i] for i in [3, 4, 5]])
+        command(arguments)
+        if PRINT_AFTER_EACH_OPERATION:
+            print(f"\nFILE AFTER OPERATION NUMBER {i}")
+            seq_ind_file.print_records()
+        i += 1
+
+    if print_at_end:
+        print("\nFINAL FILE:")
+        seq_ind_file.print_records()
 
     return seq_ind_file.database.disk_operations
+
 
 
 def experiment():
@@ -88,11 +107,12 @@ def experiment():
         json.dump(CONFIG, json_config, indent=4)
 
 
-method_function = {1: generate_random_data, 2: load_data_from_file, 3: experiment}
+method_function = {1: generate_random_data, 2: load_data_from_file, 3: load_interactive_data, 4: experiment}
 
 if __name__ == "__main__":
     print("1. Generate random data")
     print("2. Load data from file")
-    print("3. Run experiment")
+    print("3. Load data interactively")
+    print("4. Run experiment")
     choice = int(input("Choose data loading method: "))
     method_function.get(choice)()
