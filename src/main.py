@@ -41,14 +41,17 @@ def generate_random_data(print_at_end: bool = True):
 def load_data_from_file(data_source: str = "data/input.txt", print_at_end: bool = True):
     """Load data from file and create sequential-indexed file from it"""
     seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
-    commands = {"A": seq_ind_file.add_record, "U": seq_ind_file.update_record, "D": seq_ind_file.delete_record}
+    commands = {"A": seq_ind_file.add_record, "U": seq_ind_file.update_record, "D": seq_ind_file.delete_record, "R": seq_ind_file.reorganize}
 
     with open(data_source) as input_file:
         for i, input_line in enumerate(input_file.readlines()):
             input_line = input_line.rstrip("\n").split(" ")
             command = commands.get(input_line[0])
-            arguments = input_line[1].rjust(len(str(MAX_KEY)), "0") if input_line[0] == "D" else GradesRecord(input_line[1].rjust(len(str(MAX_KEY)), "0"), int(input_line[2]), [input_line[i] for i in [3, 4, 5]])
-            command(arguments)
+            if input_line[0] == "R":
+                command()
+            else:
+                arguments = input_line[1].rjust(len(str(MAX_KEY)), "0") if input_line[0] == "D" else GradesRecord(input_line[1].rjust(len(str(MAX_KEY)), "0"), int(input_line[2]), [input_line[i] for i in [3, 4, 5]])
+                command(arguments)
             if PRINT_AFTER_EACH_OPERATION:
                 print(f"\nFILE AFTER OPERATION NUMBER {i+1}")
                 seq_ind_file.print_records()
@@ -63,15 +66,18 @@ def load_data_from_file(data_source: str = "data/input.txt", print_at_end: bool 
 def load_interactive_data(print_at_end: bool = True):
     """Load data from user interactively"""
     seq_ind_file = SeqIndFile("data/database.dat", "data/overflow.dat", "data/index_file.dat")
-    commands = {"A": seq_ind_file.add_record, "U": seq_ind_file.update_record, "D": seq_ind_file.delete_record}
+    commands = {"A": seq_ind_file.add_record, "U": seq_ind_file.update_record, "D": seq_ind_file.delete_record, "R": seq_ind_file.reorganize}
     i = 1
 
     while input_line := input("Record: "):
         input_line = input_line.rstrip("\n").split(" ")
         command = commands.get(input_line[0])
-        arguments = input_line[1].rjust(len(str(MAX_KEY)), "0") if input_line[0] == "D" else GradesRecord(
-            input_line[1].rjust(len(str(MAX_KEY)), "0"), int(input_line[2]), [input_line[i] for i in [3, 4, 5]])
-        command(arguments)
+        if input_line[0] == "R":
+            command()
+        else:
+            arguments = input_line[1].rjust(len(str(MAX_KEY)), "0") if input_line[0] == "D" else GradesRecord(
+                input_line[1].rjust(len(str(MAX_KEY)), "0"), int(input_line[2]), [input_line[i] for i in [3, 4, 5]])
+            command(arguments)
         if PRINT_AFTER_EACH_OPERATION:
             print(f"\nFILE AFTER OPERATION NUMBER {i}")
             seq_ind_file.print_records()
